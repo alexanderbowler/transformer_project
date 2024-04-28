@@ -6,3 +6,9 @@ unique_chars = sorted(list(set(text)))
 print(' '.join(unique_chars))
 vocab_size = len(unique_chars)
 print(vocab_size)
+
+
+
+
+#data test/train split 
+n = int(0.9 * len(text))
