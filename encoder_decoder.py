@@ -9,6 +9,7 @@ class EncodeDecode:
             self.unique_chars = sorted(list(set(f.read())))        
         self.stoi = { ch:i for i, ch in enumerate(self.unique_chars)}
         self.itos = { i:ch for i, ch in enumerate(self.unique_chars)}
+        self.vocab_size = len(self.unique_chars)
 
     def encode(self, s :str) -> IntVec: 
         return [self.stoi[c] for c in s]

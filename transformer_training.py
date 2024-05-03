@@ -1,6 +1,7 @@
 from encoder_decoder import EncodeDecode
 import torch
 from data_loader import DataLoader
+from bigram_language_model import BigramLanguageModel
 
 # Get cpu, gpu or mps device for training.
 device = (
@@ -12,11 +13,13 @@ device = (
 )
 print(f"Using {device} device")
 
+eval_iters = 200
+
 ed = EncodeDecode("input.txt")
 with open("input.txt", "r", encoding='utf-8') as f:
     text = f.read()
 data = torch.tensor(ed.encode(text), dtype = torch.long)
-print(data.shape, data.dtype)
+#print(data.shape, data.dtype)
 #print(data[:1000])
 
 n = int(0.9*len(data))
@@ -34,12 +37,54 @@ block_size = 8
 #     result = y[i]
 #     print("Context is", context, "with the result", result)
 
+@torch.no_grad()
+def estimate_losses():
+    out = {}
+    m.eval()
+    for split in ['train', 'val']:
+        losses = torch.zeros(eval_iters)
+        for k in range(eval_iters):
+            X, Y = data_loader.get_batch(split)
+            logits, loss = m(X, Y)
+            losses[k] = loss.item()
+        out[split] = losses.mean()
+    m.train()
+    return out
+
 torch.manual_seed(1337)
-batch_size = 4 # number sequences doing in parallel
+batch_size = 32 # number sequences doing in parallel
 block_size = 8 #max context length for prediction
 
 data_loader = DataLoader('input.txt', batch_size, block_size, 0.9)
 
-x, y = data_loader.get_batch('train')
-print(f"x shape: {x.shape} \n {x=}")
-print(f"y shape: {y.shape} \n {y=}")
+
+#print(f"x shape: {xb.shape} \n")
+#print(f"y shape: {yb.shape} \n")
+
+m = BigramLanguageModel(ed.vocab_size).to(device)
+
+
+
+#print(logits.shape)
+
+#training bigram model
+optimizer = torch.optim.AdamW(params = m.parameters(), lr = 1e-3)
+
+max_iters = 10000
+
+
+for iter in range(max_iters):
+
+    if iter%100 == 0:
+        losses = estimate_losses()
+        print(f'step {iter}: train loss: {losses['train']: .4f}, test loss: {losses['val']: .4f}')
+
+    xb, yb = data_loader.get_batch('train')
+
+    logits, loss = m(xb, yb)
+    optimizer.zero_grad(set_to_none=True)
+    loss.backward()
+    optimizer.step()
+#print(loss.item())
+
+print(ed.decode(m.generate(idx = torch.zeros((1,1), dtype = torch.long, device = device), max_num_additional=400)[0].tolist()))
