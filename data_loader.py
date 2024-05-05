@@ -21,6 +21,7 @@ class DataLoader:
         if torch.backends.mps.is_available()
         else "cpu"
         )
+        #self.device = "cpu"
         
 
     def get_batch(self, split : str) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -28,7 +29,7 @@ class DataLoader:
             data = self.train_data
         else:
             data = self.test_data
-        idxs = torch.randint(0, len(data)-self.block_size, (self.batch_size,))
+        idxs = torch.randint(len(data)-self.block_size, (self.batch_size,))
         x = torch.stack([data[idx : idx+self.block_size] for idx in idxs])
         y = torch.stack([data[idx+1 : idx+self.block_size+1] for idx in idxs])
         x = x.to(self.device)
